@@ -1,1 +1,2 @@
 # yunli-incremental-data
+使用和部署请参考[这里](https://github.com/tx-customer/yunli-incremental-data/blob/main/%E5%9F%BA%E4%BA%8E%E6%97%A0%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9A%84%E6%95%B0%E6%8D%AE%E8%A1%A8%E5%A2%9E%E9%87%8F%E5%90%8C%E6%AD%A5Prototyping.pdf)
