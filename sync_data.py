@@ -64,6 +64,7 @@ def lambda_handler(event, context):
             create_dt = "-".join(items[-4:-1])
             business_type = items[-5]
 
+            # 目标表的create_dt 的数据类型，如果是字符串，需要把 date 感谢
             sql = f"""
             insert into {target_table}
             select json_text, '{business_type}' as business_type, date '{create_dt}' as create_dt
@@ -89,6 +90,7 @@ def lambda_handler(event, context):
 
                     break
                 if status == 'FAILED':
+                    print(key)
                     print("failed to insert table")
                     break
                 time.sleep(1)
