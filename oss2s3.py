@@ -4,6 +4,7 @@ import json
 import boto3
 import oss2
 
+#################这里要根据你的情况修改##############
 oss_user_key_id = 'key_id'
 oss_user_secret_key = 'secret_key'
 oss_source_bucket = 'data-zip'
@@ -11,6 +12,7 @@ oss_source_bucket = 'data-zip'
 s3_user_key_id = 'key_id'
 s3_user_secret_key = 'secret_key'
 s3_target_bucket = 'example-data'
+#################################################
 
 
 def handler(event, context):
