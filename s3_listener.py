@@ -22,7 +22,6 @@ def lambda_handler(event, context):
             DelaySeconds=0)
         print(response)
 
-    glue = boto3.client('glue')
     # TODO implement
     return {
         'statusCode': 200,

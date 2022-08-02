@@ -70,7 +70,6 @@ def lambda_handler(event, context):
             select json_text, '{business_type}' as business_type, date '{create_dt}' as create_dt
             from {source_temp_table}
             """
-            print(sql)
             execution = athena.start_query_execution(
                 QueryString=sql,
                 QueryExecutionContext=athena_data_ctx,
@@ -94,7 +93,7 @@ def lambda_handler(event, context):
                     print("failed to insert table")
                     break
                 time.sleep(1)
-            print(f"success sync {key}")
+
             # 删除已经同步过去的文件
             o = [{
                 "Key": target_file
@@ -110,8 +109,9 @@ def lambda_handler(event, context):
                 Delete=d
             )
             print(f"delete used file {response}")
+            print(f"success sync {key}")
     except Exception as ex:
-        print(ex)
+        print(f"faild to sync {key} due to {ex}")
         return {
             'statusCode': 200,
             'body': json.dumps({
