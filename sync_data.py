@@ -21,6 +21,9 @@ target_table = "demo_prod_yunli_athena_tb"
 source_temp_table = "demo_yunli_athena_tb3"
 # athena 工作组
 athena_work_group = 'primary'
+
+dynamodb_status_table = 'yunli-s3-athena-status'
+dynamodb_status_table_key = 'keyetag'
 # ===================================================================
 
 
@@ -37,8 +40,14 @@ def lambda_handler(event, context):
 
     s3 = boto3.client("s3")
     athena = boto3.client('athena')
-    try:
-        for key in keys:
+    dynamodb = boto3.client('dynamodb')
+
+    for body_str in keys:
+        body = json.loads(body_str)
+        key = body['file_key']
+        verified_key = body['verified_key']
+        try:
+
             if not key.endswith(".gz"):
                 print(key)
                 return {
@@ -53,7 +62,6 @@ def lambda_handler(event, context):
             file_name = items[-1]
             target_file = target_key + file_name
 
-            print(target_file)
             response = s3.copy_object(
                 CopySource=ukey,
                 Bucket=target_bucket,
@@ -76,6 +84,7 @@ def lambda_handler(event, context):
                 ResultConfiguration=athena_output_cfg,
                 WorkGroup=athena_work_group
             )
+            query_result = False
             while True:
                 print("begin query")
                 response = athena.get_query_execution(
@@ -87,10 +96,10 @@ def lambda_handler(event, context):
                     print(float(response['QueryExecution']['Statistics']
                                 ['DataScannedInBytes'])/1024/1024/1024)
 
+                    query_result = True
                     break
                 if status == 'FAILED':
-                    print(key)
-                    print("failed to insert table")
+                    print(f"failed to insert table {key}")
                     break
                 time.sleep(1)
 
@@ -109,16 +118,49 @@ def lambda_handler(event, context):
                 Delete=d
             )
             print(f"delete used file {response}")
+            status = 'success' if query_result else 'failure'
+            error = '-' if query_result else f'failed to insert table: {key}'
+            dynamodb.update_item(
+                TableName=dynamodb_status_table,
+                Key={
+                    dynamodb_status_table_key: {'S': verified_key},
+
+                },
+                AttributeUpdates={
+                    'status': {
+                        'Value':  {
+                            "S": status
+                        }
+                    },
+                    'error': {
+                        'Value':  {
+                            "S": error
+                        }
+                    }
+                }
+            )
             print(f"success sync {key}")
-    except Exception as ex:
-        print(f"faild to sync {key} due to {ex}")
-        return {
-            'statusCode': 200,
-            'body': json.dumps({
-                'status': 400,
-                'msg': ex
-            })
-        }
+        except Exception as ex:
+            dynamodb.update_item(
+                TableName=dynamodb_status_table,
+                Key={
+                    dynamodb_status_table_key: {'S': verified_key},
+
+                },
+                AttributeUpdates={
+                    'status': {
+                        'Value':  {
+                            "S": "failure"
+                        }
+                    },
+                    'error': {
+                        'Value':  {
+                            "S": str(ex)
+                        }
+                    }
+                }
+            )
+            print(f"faild to sync {key} due to {ex}")
 
     return {
         'statusCode': 200,
