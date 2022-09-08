@@ -72,6 +72,7 @@ def lambda_handler(event, context):
         body = json.loads(body_str)
         key = body['file_key']
         verified_key = body['verified_key']
+        etag = verified_key.split("/")[-1]
         try:
 
             if not key.endswith(".gz"):
@@ -100,7 +101,7 @@ def lambda_handler(event, context):
             while True:
                 # 创建临时表
                 # 这块需要注意调整， 尤其注意 target_s3 的路径，后面是带一个 /
-                etag = verified_key.split("/")[-1]
+
                 # remove .tar.gz 等后缀
                 raw_file_name = file_name.split(".")[0]
                 source_table = f"{source_temp_table}_{etag}_{raw_file_name}"
