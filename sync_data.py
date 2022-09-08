@@ -27,7 +27,7 @@ dynamodb_status_table_key = 'keyetag'
 # ===================================================================
 
 
-def query(athena, sql):
+def query(athena, sql, etag):
     execution = athena.start_query_execution(
         QueryString=sql,
         QueryExecutionContext=athena_data_ctx,
@@ -35,7 +35,7 @@ def query(athena, sql):
         WorkGroup=athena_work_group
     )
     query_result = False
-    print(f"begin query:\n{sql}")
+    print(f"{etag}==>begin query:\n{sql}")
     while True:
 
         response = athena.get_query_execution(
@@ -50,7 +50,7 @@ def query(athena, sql):
             query_result = True
             break
         if status == 'FAILED':
-            print(f"failed to execute sql:{sql}")
+            print(f"{etag}==>failed to execute sql:{sql}")
             break
     return query_result
 
@@ -116,9 +116,9 @@ def lambda_handler(event, context):
                 LOCATION
                 '{target_s3}{verified_key}/'
                 """
-                process_status = query(athena, ddl)
+                process_status = query(athena, ddl, etag)
                 if not process_status:
-                    error = 'failed to create temp table'
+                    error = f"{etag}==>failed to create temp table"
                     break
                 time.sleep(0.2)
 
@@ -132,7 +132,7 @@ def lambda_handler(event, context):
                 from {source_table}
                 """
 
-                process_status = query(athena, sql)
+                process_status = query(athena, sql, etag)
                 time.sleep(0.2)
                 # 删除已经同步过去的文件
                 o = [{
@@ -142,7 +142,7 @@ def lambda_handler(event, context):
                     "Key": target_key + verified_key + "/"
                 }
                 ]
-                print(f"begin to delete {o}")
+                print(f"{etag}==>begin to delete {o}")
                 d = {
                     'Objects': o,
                     'Quiet': True
@@ -152,17 +152,17 @@ def lambda_handler(event, context):
                     Bucket=target_bucket,
                     Delete=d
                 )
-                print(f"delete used file {response}")
+                print(f"{etag}==> delete used file {response}")
                 if not process_status:
-                    error = 'failed to insert data from temp table'
+                    error = f'{etag}==> failed to insert data from temp table'
                     break
 
                 drop = f"""
                 drop table {source_table}
                 """
-                process_status = query(athena, drop)
+                process_status = query(athena, drop, etag)
                 if not process_status:
-                    error = 'failed to drop temp table'
+                    error = f"{etag}==>failed to drop temp table"
 
                 # 注意这里的break, 否则就死循环了
                 break
@@ -187,7 +187,7 @@ def lambda_handler(event, context):
                     }
                 }
             )
-            print(f"success sync {key}")
+            print(f"{etag}==> success sync {key}")
         except Exception as ex:
             dynamodb.update_item(
                 TableName=dynamodb_status_table,
@@ -208,7 +208,7 @@ def lambda_handler(event, context):
                     }
                 }
             )
-            print(f"faild to sync {key} due to {ex}")
+            print(f"{etag}==> faild to sync {key} due to {ex}")
 
     return {
         'statusCode': 200,
