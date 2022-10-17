@@ -46,13 +46,12 @@ bath_wait_seconds = 15
 # ===================================================================
 
 
-def query_batch(athena, sqls: list, timeout=300, retries=3) -> dict:
+def query_batch(athena, sqls: list, timeout=300) -> dict:
     '''
     一次发起 len(sqls) 个 athena 请求，并同时轮询几个请求的执行状态，所有都执行成功了
     再统一返回。比等待时间是几个sql中执行最长的sql的时间
     '''
     executions = dict()
-    retries_rec = dict()
 
     for sql in sqls:
         execution = athena.start_query_execution(
@@ -62,7 +61,6 @@ def query_batch(athena, sqls: list, timeout=300, retries=3) -> dict:
             WorkGroup=athena_work_group
         )
         executions[sql] = execution
-        retries_rec[sql] = 0
 
     time.sleep(0.1)
 
@@ -84,12 +82,7 @@ def query_batch(athena, sqls: list, timeout=300, retries=3) -> dict:
 
         if status == 'FAILED':
             reason = response['QueryExecution']['Status']['StateChangeReason']
-            if retries_rec[sql] >= retries:
-                errors[sql] = f"failed_execute_sql:[retry {retries} times] [{sql}]  reason[{reason}]"
-            else:
-                time.sleep(5)
-                executions[sql] = execution
-                retries_rec[sql] += 1
+            errors[sql] = f"failed_execute_sql:[{sql}]  reason[{reason}]"
 
         else:
             executions[sql] = execution
