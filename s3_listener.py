@@ -52,11 +52,12 @@ def lambda_handler(event, context):
                     }
                 }
             )
-            key = f"/{record['s3']['bucket']['name']}/{record['s3']['object']['key']}"
+            key = f"{record['s3']['bucket']['name']}/{record['s3']['object']['key']}"
             ukey = urllib.parse.unquote_plus(key, encoding='utf-8')
             k_info = {
                 "file_key": ukey,
-                "verified_key": verified_key
+                "verified_key": verified_key,
+                "event_time": event_time
             }
             str_info = json.dumps(k_info)
             sqs_resp = sqs.send_message(
